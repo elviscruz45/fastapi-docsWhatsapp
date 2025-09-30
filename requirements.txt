@@ -1,0 +1,27 @@
+# FastAPI y servidor
+fastapi>=0.116.2,<0.117.0
+uvicorn>=0.36.0,<0.37.0
+python-multipart>=0.0.6
+
+# Procesamiento de documentos y PDFs
+reportlab>=4.0.4
+weasyprint>=66.0,<67.0
+
+# Procesamiento de imágenes
+pillow>=10.0.0
+
+# Inteligencia Artificial - Google Gemini
+google-generativeai>=0.3.0
+
+# Base de datos y storage
+supabase>=2.3.0
+
+# Utilidades
+openpyxl>=3.1.2
+python-dotenv>=1.0.0
+aiofiles>=23.2.1
+pydantic-settings>=2.0.0
+
+# Dependencias adicionales para producción
+gunicorn>=21.2.0
+httpx>=0.25.0

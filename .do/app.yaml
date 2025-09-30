@@ -1,0 +1,71 @@
+name: whatsapp-analyzer
+services:
+  - name: api
+    source_dir: /
+    github:
+      repo: your-username/fastapi-docswhatsapp
+      branch: main
+    run_command: uvicorn main:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+
+    # Variables de entorno (configurar en DigitalOcean App Platform)
+    envs:
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: GEMINI_MODEL
+        scope: RUN_TIME
+        value: "gemini-2.5-flash-lite"
+      - key: SUPABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: SUPABASE_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: SUPABASE_STORAGE_BUCKET
+        scope: RUN_TIME
+        value: "whatsapp-reports"
+      - key: APP_NAME
+        scope: RUN_TIME
+        value: "WhatsApp Chat Analyzer API"
+      - key: APP_VERSION
+        scope: RUN_TIME
+        value: "2.0.0"
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "False"
+      - key: FASTAPI_ENV
+        scope: RUN_TIME
+        value: "production"
+      - key: MAX_FILE_SIZE
+        scope: RUN_TIME
+        value: "52428800"
+      - key: MAX_MESSAGES_TO_ANALYZE
+        scope: RUN_TIME
+        value: "1000"
+      - key: MAX_ANALYSIS_TOKENS
+        scope: RUN_TIME
+        value: "8000"
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        value: '["*"]'
+
+    # Health check
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 60
+      period_seconds: 30
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Recursos (instance_size_slug ya está definido arriba)
+
+# Configuración de alertas (opcional)
+alerts:
+  - rule: CPU_UTILIZATION
+    value: 80
+  - rule: MEM_UTILIZATION
+    value: 80

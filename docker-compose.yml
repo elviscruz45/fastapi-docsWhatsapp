@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  whatsapp-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatsapp-analyzer
+    ports:
+      - "8000:8000"
+    environment:
+      # Gemini AI Configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-whatsapp-reports}
+
+      # Application Configuration
+      - APP_NAME=${APP_NAME:-WhatsApp Chat Analyzer API}
+      - APP_VERSION=${APP_VERSION:-2.0.0}
+      - DEBUG=${DEBUG:-False}
+      - FASTAPI_ENV=${FASTAPI_ENV:-production}
+
+      # File Configuration
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
+      - MAX_MESSAGES_TO_ANALYZE=${MAX_MESSAGES_TO_ANALYZE:-1000}
+      - MAX_ANALYSIS_TOKENS=${MAX_ANALYSIS_TOKENS:-8000}
+
+      # CORS Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS:-["*"]}
+    volumes:
+      # Montar directorio para archivos temporales (opcional para desarrollo)
+      - ./tmp:/tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Limites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+        reservations:
+          memory: 512M
+          cpus: "0.25"
+
+  # Configuración para desarrollo con hot reload
+  whatsapp-analyzer-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatsapp-analyzer-dev
+    ports:
+      - "8001:8000"
+    environment:
+      # Mismas variables que el servicio principal
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-whatsapp-reports}
+      - APP_NAME=${APP_NAME:-WhatsApp Chat Analyzer API}
+      - APP_VERSION=${APP_VERSION:-2.0.0}
+      - DEBUG=True
+      - FASTAPI_ENV=development
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
+      - MAX_MESSAGES_TO_ANALYZE=${MAX_MESSAGES_TO_ANALYZE:-1000}
+      - MAX_ANALYSIS_TOKENS=${MAX_ANALYSIS_TOKENS:-8000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["*"]}
+    volumes:
+      # Para desarrollo: montar código fuente para hot reload
+      - .:/app
+    command:
+      ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    profiles:
+      - dev
+
+networks:
+  default:
+    driver: bridge
