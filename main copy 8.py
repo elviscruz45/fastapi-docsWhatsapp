@@ -1,7 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
-from cors_config import CORS_CONFIG
 import tempfile
 import os
 import zipfile
@@ -18,8 +17,6 @@ from fastapi_docswhatsapp.services.gemini_analyzer import GeminiAnalyzer
 from fastapi_docswhatsapp.services.report_generator import ReportGenerator
 from fastapi_docswhatsapp.services.supabase_client import SupabaseClient
 from fastapi_docswhatsapp.config.settings import get_settings
-from PIL import Image
-import io
 
 app = FastAPI(
     title="WhatsApp Bitácora Generator",
@@ -27,20 +24,13 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Configurar CORS - Solución definitiva
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://platform.minetrack.site",
-        "https://www.platform.minetrack.site",
-        "http://localhost:19006",  # Expo development
-        "http://localhost:3000",   # React development
-        "http://localhost:8080",   # Other development
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 settings = get_settings()
@@ -49,22 +39,12 @@ settings = get_settings()
 async def root():
     return {
         "message": "WhatsApp Chat Analyzer API", 
-        "version": "1.0",
-        "docs": "/docs"
-    }
-
-@app.options("/{path:path}")
-async def options_handler(path: str):
-    """Maneja todas las solicitudes OPTIONS para CORS"""
-    return {"message": "CORS preflight successful"}
-
-@app.get("/test-cors")
-async def test_cors():
-    """Endpoint específico para probar CORS"""
-    return {
-        "message": "CORS working", 
-        "origin_allowed": True,
-        "timestamp": "2024-01-01"
+        "version": "2.0.0",
+        "description": "Genera informes de bitácora profesionales desde chats de WhatsApp usando IA",
+        "endpoint": {
+            "crear-informe-final": "POST - Genera informe de bitácora profesional usando Gemini AI + WeasyPrint"
+        },
+        "usage": "Sube un archivo ZIP de WhatsApp exportado para generar un informe profesional"
     }
 
 
@@ -90,11 +70,6 @@ async def crear_informe_final(background_tasks: BackgroundTasks, file: UploadFil
             # Guardar archivo ZIP subido
             zip_path = temp_path / file.filename
             content = await file.read()
-            
-            # Verificar tamaño del archivo para evitar procesar archivos muy grandes
-            if len(content) > 500 * 1024 * 1024:  # Aumentado a 500MB límite
-                raise HTTPException(status_code=413, detail="Archivo ZIP muy grande (máximo 500MB)")
-            
             with open(zip_path, "wb") as f:
                 f.write(content)
             
@@ -115,33 +90,9 @@ async def crear_informe_final(background_tasks: BackgroundTasks, file: UploadFil
             print(f"Generando informe de bitácora con {len(image_files)} imágenes...")
             print(f"Longitud del chat: {len(chat_text)} caracteres")
             
-            # Optimizar imágenes para reducir tamaño del PDF y tiempo de procesamiento
-            if image_files:
-                print(f"=== Optimizando {len(image_files)} imágenes ===")
-                optimized_count = 0
-                for filename, img_path in image_files.items():
-                    try:
-                        original_size = img_path.stat().st_size
-                        # Solo redimensionar si la imagen es mayor a 500KB o muy ancha
-                        if original_size > 500_000 or should_resize_image(img_path):
-                            resized_data = resize_image_optimized(img_path, max_width=800, quality=85)
-                            with open(img_path, "wb") as f:
-                                f.write(resized_data)
-                            new_size = len(resized_data)
-                            optimized_count += 1
-                            print(f"  📷 {filename}: {original_size//1024}KB → {new_size//1024}KB")
-                    except Exception as e:
-                        print(f"  ⚠️ Error optimizando {filename}: {e}")
-                print(f"=== {optimized_count}/{len(image_files)} imágenes optimizadas ===")
-            
             # Analizar el chat con Gemini para crear informe de bitácora
-            # Limitar el texto del chat para reducir tokens y tiempo de procesamiento
-            max_chat_length = 100000  # Aumentado de 100000 para mejor contexto
-            chat_for_analysis = chat_text[:max_chat_length] if len(chat_text) > max_chat_length else chat_text
-            
-            print(f"Enviando {len(chat_for_analysis)} caracteres a Gemini para análisis...")
             analyzer = GeminiAnalyzer(settings.gemini_api_key, settings.gemini_model)
-            informe_data = await analyzer.generate_project_report(chat_for_analysis)
+            informe_data = await analyzer.generate_project_report(chat_text)
             
             # Debug: Mostrar qué datos recibimos de Gemini
             print("=== DEBUG: Datos del informe ===")
@@ -153,11 +104,8 @@ async def crear_informe_final(background_tasks: BackgroundTasks, file: UploadFil
             
             # Generar HTML del informe con imágenes
             print("=== Generando HTML del informe ===")
-            # Pasar solo las imágenes necesarias para evitar procesamiento innecesario
-            relevant_image_files = get_relevant_images(chat_text, image_files)
-            print(f"Usando {len(relevant_image_files)} de {len(image_files)} imágenes en el informe")
-            
-            html_content = generate_informe_html(informe_data, chat_text, relevant_image_files)
+
+            html_content = generate_informe_html(informe_data, chat_text, image_files)
             print("=== Convirtiendo HTML a PDF ===")
 
             # Convertir HTML a PDF usando WeasyPrint
@@ -340,7 +288,6 @@ def generate_informe_html(informe_data: Dict[str, Any], chat_text: str, image_fi
                     if image_filename in image_files:
                         try:
                             img_path = image_files[image_filename]
-                            # Las imágenes ya están optimizadas, solo leer y codificar
                             with open(img_path, 'rb') as img_file:
                                 img_data = img_file.read()
                                 img_base64 = base64.b64encode(img_data).decode('utf-8')
@@ -384,13 +331,8 @@ def generate_informe_html(informe_data: Dict[str, Any], chat_text: str, image_fi
         
         # Si no hay imágenes en el texto pero sí archivos de imagen, incluirlos
         if not images_html and image_files:
-            # Limitar a 3 imágenes más pequeñas para evitar PDFs muy pesados
-            sorted_images = sorted(image_files.items(), key=lambda x: x[1].stat().st_size)[:3]
-            for filename, img_path in sorted_images:
+            for filename, img_path in list(image_files.items())[:5]:  # Máximo 5 imágenes adicionales
                 try:
-                    # Verificar tamaño antes de procesar
-                    if img_path.stat().st_size > 2_000_000:  # Skip images > 2MB
-                        continue
                     with open(img_path, 'rb') as img_file:
                         img_data = img_file.read()
                         img_base64 = base64.b64encode(img_data).decode('utf-8')
@@ -431,7 +373,8 @@ def generate_informe_html(informe_data: Dict[str, Any], chat_text: str, image_fi
         # Header del informe
         '<div class="report-header">',
         f'<h1 class="report-title">📋 {escape_html(informe_data.get("titulo_proyecto", "Informe de Bitácora del Proyecto"))}</h1>',
-        f'<div class="report-subtitle">Fecha: {datetime.now().strftime("%d de %B de %Y")}</div>',
+        f'<div class="report-subtitle">Generado automáticamente el {datetime.now().strftime("%d de %B de %Y")}</div>',
+        f'<div class="report-subtitle">Análisis realizado por Inteligencia Artificial</div>',
         '</div>',
         
         # Resumen Ejecutivo
@@ -591,70 +534,6 @@ def generate_informe_html(informe_data: Dict[str, Any], chat_text: str, image_fi
     ])
     
     return '\n'.join(html_parts)
-
-def get_relevant_images(chat_text: str, image_files: Dict[str, Path]) -> Dict[str, Path]:
-    """Filtra solo las imágenes que están mencionadas en el chat para optimizar procesamiento"""
-    relevant_images = {}
-    
-    # Patrones para buscar referencias a imágenes en el chat
-    attachment_patterns = [
-        re.compile(r'<attached:\s*([^>]+\.(jpg|jpeg|png|gif|bmp|webp))>', re.IGNORECASE),
-        re.compile(r'‎<attached:\s*([^>]+\.(jpg|jpeg|png|gif|bmp|webp))>', re.IGNORECASE),
-    ]
-    
-    # Buscar imágenes mencionadas en el chat
-    for line in chat_text.split('\n'):
-        for pattern in attachment_patterns:
-            match = pattern.search(line)
-            if match:
-                image_filename = match.group(1)
-                if image_filename in image_files:
-                    relevant_images[image_filename] = image_files[image_filename]
-    
-    # Si no se encontraron imágenes mencionadas, incluir las 3 más pequeñas
-    if not relevant_images and image_files:
-        sorted_images = sorted(image_files.items(), key=lambda x: x[1].stat().st_size)[:3]
-        relevant_images = dict(sorted_images)
-    
-    return relevant_images
-
-def should_resize_image(img_path, max_width=800):
-    """Verifica si una imagen necesita ser redimensionada sin cargarla completamente"""
-    try:
-        with Image.open(img_path) as img:
-            return img.width > max_width or img.height > 1200
-    except Exception:
-        return False
-
-def resize_image_optimized(img_path, max_width=800, quality=85):
-    """Redimensiona y optimiza imagen con control de calidad"""
-    with Image.open(img_path) as img:
-        # Convertir a RGB si es necesario (para JPEG)
-        if img.mode in ('RGBA', 'P'):
-            img = img.convert('RGB')
-        
-        # Redimensionar si es necesario
-        if img.width > max_width or img.height > 1200:
-            # Calcular nuevas dimensiones manteniendo aspecto
-            ratio = min(max_width / img.width, 1200 / img.height)
-            new_width = int(img.width * ratio)
-            new_height = int(img.height * ratio)
-            img = img.resize((new_width, new_height), Image.LANCZOS)
-        
-        # Guardar optimizado
-        buf = io.BytesIO()
-        img_format = 'JPEG' if img_path.suffix.lower() in ['.jpg', '.jpeg'] else img.format
-        
-        if img_format == 'JPEG':
-            img.save(buf, format='JPEG', quality=quality, optimize=True)
-        else:
-            img.save(buf, format=img_format, optimize=True)
-        
-        return buf.getvalue()
-
-# Función de compatibilidad (mantener para no romper código existente)
-def resize_image(img_path, max_width=800):
-    return resize_image_optimized(img_path, max_width)
 
 def extract_chat_and_images(extract_path: Path) -> Tuple[str, Dict[str, Path]]:
     """

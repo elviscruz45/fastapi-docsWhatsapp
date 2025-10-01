@@ -252,7 +252,7 @@ class GeminiAnalyzer:
         IMPORTANTE: Responde ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown, sin explicaciones.
 
         CHAT:
-        {chat_text[:120000]}
+        {chat_text[:100000]}
         
         Devuelve EXACTAMENTE este formato JSON (sin ```json ni otros marcadores):
         {{
