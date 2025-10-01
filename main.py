@@ -34,7 +34,10 @@ app.add_middleware(
         "https://www.platform.minetrack.site",
         "http://localhost:19006",  # Expo development
         "http://localhost:3000",   # React development
+        "http://localhost:8080",   # Other development
         "http://localhost:8081",   # Other development
+        "http://localhost:8082",   # Other development
+
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
