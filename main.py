@@ -26,20 +26,11 @@ app = FastAPI(
     description="Genera informes de bitácora profesionales desde chats de WhatsApp usando Gemini AI y WeasyPrint",
     version="2.0.0"
 )
-# Configurar CORS - Solución definitiva
+# Configurar CORS - Permitir todos los orígenes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://platform.minetrack.site",
-        "https://www.platform.minetrack.site",
-        "http://localhost:19006",  # Expo development
-        "http://localhost:3000",   # React development
-        "http://localhost:8080",   # Other development
-        "http://localhost:8081",   # Other development
-        "http://localhost:8082",   # Other development
-
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Permitir cualquier origen
+    allow_credentials=False,  # Debe ser False para usar "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],

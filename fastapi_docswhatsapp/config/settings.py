@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     max_analysis_tokens: int = Field(default=8000, description="Máximo de tokens para análisis de Gemini")
     
     # CORS
-    cors_origins: list = Field(default=["*"], description="Orígenes permitidos para CORS")
+    # cors_origins: list = Field(default=["*"], description="Orígenes permitidos para CORS")
     
     class Config:
         env_file = ".env"
