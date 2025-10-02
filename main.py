@@ -29,14 +29,8 @@ app = FastAPI(
 # Configurar CORS siguiendo documentación oficial FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://platform.minetrack.site",
-        "https://www.platform.minetrack.site",
-        "http://localhost:8081",
-        "http://localhost:19006",
-        "http://localhost:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Permitir cualquier origen temporalmente
+    allow_credentials=False,  # Debe ser False para usar "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -44,12 +38,10 @@ app.add_middleware(
 
 settings = get_settings()
 
-settings = get_settings()
-
 @app.get("/")
 async def root():
     return {
-        "message": "WhatsApp Chat Analyzer API", 
+        "message": "WhatsApp Chat Analyzer API ver3", 
         "version": "1.0",
         "docs": "/docs"
     }
