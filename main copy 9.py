@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from cors_config import CORS_CONFIG
 import tempfile
 import os
 import zipfile
@@ -25,24 +26,15 @@ app = FastAPI(
     description="Genera informes de bitácora profesionales desde chats de WhatsApp usando Gemini AI y WeasyPrint",
     version="2.0.0"
 )
-
-# Configurar CORS siguiendo documentación oficial FastAPI
+# Configurar CORS - Permitir todos los orígenes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://platform.minetrack.site",
-        "https://www.platform.minetrack.site",
-        "http://localhost:8081",
-        "http://localhost:19006",
-        "http://localhost:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Permitir cualquier origen
+    allow_credentials=False,  # Debe ser False para usar "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
-settings = get_settings()
 
 settings = get_settings()
 
